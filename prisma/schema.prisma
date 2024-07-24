@@ -17,9 +17,10 @@ model User {
   id        String    @id @default(uuid())
   email  String    @unique
   password  String
+  username String
   verifyCode String
   verifyCodeExpiry DateTime
-  isAcceptingMessage Boolean
+  isAcceptingMessage Boolean 
   isVerified Boolean @default(false)
   message   Message[]
 }
