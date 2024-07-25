@@ -7,15 +7,35 @@ const client=new PrismaClient()
 export async function POST(req:Request){
     try{
         const {email,password,username}=await req.json()
+
+        const usermail=await client.user.findFirst({
+            select:{
+                email:true,
+            },
+            where:{
+                email
+            }
+        })
+
+        if(usermail!=null){
+            return Response.json({
+                success:false,
+                message:"Email already exists"
+            },{
+                status:400
+            })
+        }
+
         const user=await client.user.findFirst({
             select:{
                 email:true,
                 isVerified:true
             },
             where:{
-                email,
+                username
             }
         })
+
 
         const verifyCode=Math.floor(10000 + Math.random()* 900000).toString()
         
@@ -31,9 +51,9 @@ export async function POST(req:Request){
             const hashedPassword=await bcrypt.hash(password,10)
             const expiryDate=new Date()
             expiryDate.setHours(expiryDate.getHours()+1)
-            await client.user.update({
+            await client.user.updateMany({
                 where:{
-                    email
+                    username
                 },
                 data:{
                     email,
@@ -42,8 +62,25 @@ export async function POST(req:Request){
                     verifyCode,
                     verifyCodeExpiry:expiryDate,
                     isAcceptingMessage:true
-                }
+                }                
             })
+
+            const emailResponse=await sendVerifcationMail(email,username,verifyCode)
+            if(!emailResponse.success){
+                return Response.json({
+                    success:false,
+                    message:"error while sending mail"
+                },{
+                    status:500
+                })
+            }else{
+                return Response.json({
+                    success:true,
+                    message:"Check your inbox and verify your account"
+                },{
+                    status:200
+                })
+            }
 
         }else{
             const hashedPassword=await bcrypt.hash(password,10)
